@@ -14,3 +14,4 @@ Vì server được deploy trên Cloudflare Workers:
 
  Tuy nhiên nhiều chỗ cònn đang thiếu sót không thể so sánh với các app quản lý dự án đã có tích hợp AI trên mạng tuy nhiên trong tương lai nếu có thể cải tiến dự án này thì có giúp tích hợp quản lý dự án vào workflow coding một cách tự nhiên, giảm thiểu sự gián đoạn khi chuyển đổi giữa các app và tăng năng suất làm việc. Thay vì phải sử dụng nhiều công cụ riêng biệt, em có thể quản lý mọi thứ thông qua AI (cursor, claude) mà em đã sử dụng hàng ngày.
 
+[![Watch the video](https://img.youtube.com/vi/hCI0yf_HGrk/maxresdefault.jpg)](https://youtu.be/hCI0yf_HGrk)
