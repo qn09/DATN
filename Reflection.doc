@@ -1,0 +1,16 @@
+
+##Reflection on how this project helps your workflow 
+
+Tích Hợp với AI Assistants
+Dự án này giúp em quản lý công việc trực tiếp thông qua các AI Claude Desktop và Cursor mà không cần rời khỏi công cụ làm việc. Thay vì phải mở ứng dụng quản lý dự án riêng thì mình có thể:
+- Yêu cầu bằng ngôn ngữ tự nhiên: Tạo dự án mới thay vì phải điền form, xem tất cả todos đang làm để có cái nhìn tổng quan.
+- Cập nhật trạng : "Đánh dấu todo đó là done" thay vì click chuột qua nhiều bước trong app. 
+- Có thể vừa code vừa quản lý dự án trong cùng một cửa sổ vàvà AI có thể kết hợp nhiều tools cùng lúc để trả lời những câu hỏi phức tạp.
+Truy Cập Từ Nhiều Nơi
+Vì server được deploy trên Cloudflare Workers:
+- Không cần cài đặt: Chỉ cần cấu hình MCP client một lần
+- Dữ liệu được lưu trên cloud, có thể truy cập từ bất kỳ đâu
+- Có thể quản lý dự án từ máy tính, laptop, hoặc bất kỳ thiết bị nào có MCP client
+
+ Tuy nhiên nhiều chỗ cònn đang thiếu sót không thể so sánh với các app quản lý dự án đã có tích hợp AI trên mạng tuy nhiên trong tương lai nếu có thể cải tiến dự án này thì có giúp tích hợp quản lý dự án vào workflow coding một cách tự nhiên, giảm thiểu sự gián đoạn khi chuyển đổi giữa các app và tăng năng suất làm việc. Thay vì phải sử dụng nhiều công cụ riêng biệt, em có thể quản lý mọi thứ thông qua AI (cursor, claude) mà em đã sử dụng hàng ngày.
+
