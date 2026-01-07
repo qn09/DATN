@@ -266,9 +266,9 @@ wrangler deploy
 
 ---
 
-<iframe width="951" height="535" src="https://www.youtube.com/embed/iadzYtX4ERU" title="The Fastest Way to Embed YouTube Videos in GitHub Readme Markdown (Free &amp; Easy)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 
+https://www.youtube.com/embed/iadzYtX4ERU
 
 
 
