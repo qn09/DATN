@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: exchange-mvp-postgres
+    environment:
+      POSTGRES_DB: exchange_mvp
+      POSTGRES_USER: exchange
+      POSTGRES_PASSWORD: exchange
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:
