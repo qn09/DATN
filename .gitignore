@@ -1,0 +1,23 @@
+# Java
+**/target/
+*.log
+
+# Node.js
+**/node_modules/
+**/dist/
+
+# Local configuration and IDE files
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Local project documentation
+docs/
+*.md
+!README.md
+*.doc
+*.docx
