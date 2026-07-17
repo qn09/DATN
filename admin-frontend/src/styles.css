@@ -1,0 +1,375 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #18232a;
+  background: #edf1f3;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.adminShell {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 22px;
+  background: #10232c;
+  color: #f7fbfc;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.brand,
+.sessionHeader,
+.status,
+.panelHeader > div,
+.primaryButton,
+.ghostButton,
+.iconButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand {
+  gap: 12px;
+}
+
+.brandMark,
+.metricIcon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #2e8f7f;
+  color: #ffffff;
+}
+
+.brand h1,
+.brand p,
+.topbar h2,
+.topbar p,
+.panel h3 {
+  margin: 0;
+}
+
+.brand h1 {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.brand p,
+.topbar p,
+.muted {
+  color: #91a5ae;
+  font-size: 13px;
+}
+
+.sessionBox,
+.status {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.sessionHeader {
+  color: #b7c7ce;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.identity {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 12px;
+}
+
+.identity span {
+  color: #a9b9c1;
+  font-size: 13px;
+}
+
+.status {
+  margin-top: auto;
+  color: #d8e3e7;
+  font-size: 13px;
+}
+
+.status.success {
+  border-color: rgba(46, 143, 127, 0.55);
+  background: rgba(46, 143, 127, 0.14);
+}
+
+.status.error {
+  border-color: rgba(203, 75, 88, 0.65);
+  background: rgba(203, 75, 88, 0.16);
+}
+
+.workspace {
+  min-width: 0;
+  padding: 24px;
+}
+
+.topbar {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.topbar h2 {
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.loginPane {
+  max-width: 440px;
+}
+
+.grid,
+.metricsGrid {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.twoCol {
+  grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+}
+
+.metricsGrid {
+  grid-template-columns: repeat(5, minmax(170px, 1fr));
+}
+
+.panel,
+.metricCard {
+  min-width: 0;
+  border: 1px solid #dae4e8;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(19, 36, 48, 0.06);
+}
+
+.panel {
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.panelHeader h3 {
+  font-size: 16px;
+}
+
+.metricCard {
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.metricCard .metricIcon {
+  width: 36px;
+  height: 36px;
+}
+
+.metricCard span {
+  color: #61727b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.metricCard strong {
+  color: #172026;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  color: #53636c;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid #cad5db;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #ffffff;
+  color: #1e2c33;
+  outline: none;
+}
+
+input:focus {
+  border-color: #2e8f7f;
+  box-shadow: 0 0 0 3px rgba(46, 143, 127, 0.14);
+}
+
+.primaryButton,
+.ghostButton,
+.iconButton {
+  min-height: 38px;
+  border-radius: 6px;
+  padding: 8px 12px;
+  justify-content: center;
+  border: 1px solid transparent;
+}
+
+.primaryButton {
+  color: #ffffff;
+  background: #2f6f9f;
+}
+
+.ghostButton {
+  color: #eaf2f4;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.iconButton {
+  width: 40px;
+  padding: 0;
+  background: #ffffff;
+  border-color: #d8e1e6;
+  color: #233843;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th,
+td {
+  padding: 9px 8px;
+  border-bottom: 1px solid #edf1f3;
+  text-align: left;
+  white-space: nowrap;
+}
+
+th {
+  color: #6a7880;
+  font-weight: 800;
+  background: #f8fafb;
+}
+
+.emptyCell {
+  color: #85949b;
+  font-size: 13px;
+  text-align: center;
+  padding: 18px 8px;
+}
+
+.rolePill,
+.sidePill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 50px;
+  border-radius: 999px;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.rolePill.admin {
+  color: #2f6f9f;
+  background: rgba(47, 111, 159, 0.12);
+}
+
+.rolePill.user {
+  color: #53636c;
+  background: #edf1f3;
+}
+
+.sidePill.buy {
+  color: #13795f;
+  background: rgba(19, 121, 95, 0.12);
+}
+
+.sidePill.sell {
+  color: #c33f4c;
+  background: rgba(195, 63, 76, 0.12);
+}
+
+@media (max-width: 1180px) {
+  .adminShell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(170px, 1fr));
+  }
+
+  .twoCol {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .workspace,
+  .sidebar {
+    padding: 16px;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+}
