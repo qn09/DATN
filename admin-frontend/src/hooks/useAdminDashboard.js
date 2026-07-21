@@ -12,6 +12,7 @@ export function useAdminDashboard() {
   const [accounts, setAccounts] = React.useState([]);
   const [orders, setOrders] = React.useState([]);
   const [trades, setTrades] = React.useState([]);
+  const [fiatDeposits, setFiatDeposits] = React.useState([]);
   const [prices, setPrices] = React.useState([]);
   const [status, setStatus] = React.useState({ type: 'idle', text: 'Ready' });
   const [busy, setBusy] = React.useState(false);
@@ -58,6 +59,7 @@ export function useAdminDashboard() {
     setAccounts([]);
     setOrders([]);
     setTrades([]);
+    setFiatDeposits([]);
     setPrices([]);
     localStorage.removeItem('exchange.admin.auth');
     setStatus({ type: 'idle', text: 'Signed out' });
@@ -71,6 +73,7 @@ export function useAdminDashboard() {
         request('/admin/accounts'),
         request('/admin/orders'),
         request('/admin/trades?limit=50'),
+        request('/admin/fiat-deposits?limit=50'),
         request('/admin/market/prices')
       ])
     );
@@ -79,7 +82,8 @@ export function useAdminDashboard() {
     setAccounts(data[1]);
     setOrders(data[2]);
     setTrades(data[3]);
-    setPrices(data[4]);
+    setFiatDeposits(data[4]);
+    setPrices(data[5]);
   }
 
   React.useEffect(() => {
@@ -90,6 +94,7 @@ export function useAdminDashboard() {
     accounts,
     auth,
     busy,
+    fiatDeposits,
     login,
     logout,
     orders,

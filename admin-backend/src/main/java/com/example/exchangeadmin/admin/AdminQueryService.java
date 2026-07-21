@@ -80,6 +80,38 @@ public class AdminQueryService {
         );
     }
 
+    public List<AdminFiatDepositView> fiatDeposits(int limit) {
+        int safeLimit = Math.min(Math.max(limit, 1), 200);
+        return jdbc.query(
+                """
+                        SELECT deposit.request_id, deposit.account_id, account.username,
+                               deposit.currency, deposit.amount, deposit.status, deposit.gateway,
+                               deposit.gateway_reference, deposit.failure_reason,
+                               deposit.created_at, deposit.completed_at
+                        FROM fiat_deposit_requests deposit
+                        JOIN accounts account ON account.id = deposit.account_id
+                        ORDER BY deposit.id DESC
+                        LIMIT ?
+                        """,
+                (rs, rowNum) -> new AdminFiatDepositView(
+                        rs.getString("request_id"),
+                        rs.getLong("account_id"),
+                        rs.getString("username"),
+                        rs.getString("currency"),
+                        normalize(rs.getBigDecimal("amount")),
+                        rs.getString("status"),
+                        rs.getString("gateway"),
+                        rs.getString("gateway_reference"),
+                        rs.getString("failure_reason"),
+                        rs.getTimestamp("created_at").toInstant(),
+                        rs.getTimestamp("completed_at") == null
+                                ? null
+                                : rs.getTimestamp("completed_at").toInstant()
+                ),
+                safeLimit
+        );
+    }
+
     private long count(String sql) {
         Long value = jdbc.queryForObject(sql, Long.class);
         return value == null ? 0 : value;

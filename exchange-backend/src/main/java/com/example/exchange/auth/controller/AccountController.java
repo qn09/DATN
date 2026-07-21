@@ -72,7 +72,7 @@ public class AccountController {
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @RequestBody DepositRequest request
     ) {
-        authorization.requireOwnerOrAdmin(accountId, currentAccount);
+        authorization.requireAdmin(currentAccount);
         accounts.requireAccount(accountId);
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             wallets.deposit(accountId, request.asset(), request.amount());

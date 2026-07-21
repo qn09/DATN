@@ -48,6 +48,9 @@ public class WalletValuationService {
     }
 
     private PriceQuote quote(String asset) {
+        if (AssetCatalog.FIAT_ASSET.equals(asset)) {
+            return new PriceQuote(null, null);
+        }
         if (AssetCatalog.QUOTE_ASSET.equals(asset)) {
             return new PriceQuote(USDT_PRICE, INTERNAL_SOURCE);
         }

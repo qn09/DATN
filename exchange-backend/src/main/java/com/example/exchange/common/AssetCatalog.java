@@ -5,7 +5,9 @@ import java.util.Locale;
 
 public final class AssetCatalog {
     public static final String QUOTE_ASSET = "USDT";
+    public static final String FIAT_ASSET = "VND";
     public static final List<String> SUPPORTED_ASSETS = List.of(
+            FIAT_ASSET,
             "USDT",
             "BTC",
             "ETH",

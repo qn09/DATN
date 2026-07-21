@@ -88,6 +88,42 @@ public class WalletService {
     }
 
     @Transactional
+    public synchronized void creditFiatDeposit(
+            long accountId,
+            String currency,
+            BigDecimal amount,
+            String depositRequestId
+    ) {
+        requirePositive(amount, "amount");
+        String normalizedCurrency = AssetCatalog.requireSupportedAsset(currency);
+        if (!AssetCatalog.FIAT_ASSET.equals(normalizedCurrency)) {
+            throw new IllegalArgumentException("fiat deposit currency must be " + AssetCatalog.FIAT_ASSET);
+        }
+        String referenceId = requireIdempotencyKey(depositRequestId);
+        postAndProject(
+                "FIAT_DEPOSIT",
+                referenceId,
+                "fiat-deposit:" + referenceId,
+                "Confirmed domestic transfer " + amount.stripTrailingZeros().toPlainString() + " " + normalizedCurrency,
+                List.of(
+                        LedgerPosting.system(
+                                normalizedCurrency,
+                                LedgerAccountType.SYSTEM_EXTERNAL,
+                                EntryDirection.DEBIT,
+                                amount
+                        ),
+                        LedgerPosting.user(
+                                accountId,
+                                normalizedCurrency,
+                                LedgerAccountType.USER_AVAILABLE,
+                                EntryDirection.CREDIT,
+                                amount
+                        )
+                )
+        );
+    }
+
+    @Transactional
     public synchronized void reserveForOrder(
             long accountId,
             MarketSymbol market,

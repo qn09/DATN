@@ -10,15 +10,32 @@ export async function apiRequest(path, { token, ...options } = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${apiBase}${path}`, {
-    ...options,
-    headers
-  });
+  let response;
+  try {
+    response = await fetch(`${apiBase}${path}`, {
+      ...options,
+      headers,
+      signal: options.signal || AbortSignal.timeout(12000)
+    });
+  } catch (error) {
+    if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+      throw new Error('Request timed out. Check whether the backend is running.');
+    }
+    throw new Error('Cannot connect to the backend.');
+  }
+
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
 
   if (!response.ok) {
-    throw new Error(data?.error || `HTTP ${response.status}`);
+    const retryAfter = response.headers.get('Retry-After');
+    const suffix = response.status === 429 && retryAfter ? ` Try again in ${retryAfter}s.` : '';
+    throw new Error(`${data?.error || `HTTP ${response.status}`}${suffix}`);
   }
 
   return data;

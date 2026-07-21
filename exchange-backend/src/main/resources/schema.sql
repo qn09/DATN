@@ -18,6 +18,29 @@ CREATE TABLE IF NOT EXISTS wallet_balances (
     PRIMARY KEY (account_id, asset)
 );
 
+CREATE TABLE IF NOT EXISTS fiat_deposit_requests (
+    id BIGSERIAL PRIMARY KEY,
+    request_id TEXT NOT NULL UNIQUE,
+    account_id BIGINT NOT NULL REFERENCES accounts(id),
+    currency TEXT NOT NULL,
+    amount NUMERIC(38, 18) NOT NULL CHECK (amount > 0),
+    status TEXT NOT NULL CHECK (status IN ('NEW', 'PROCESSING', 'SUCCESS', 'FAILED')),
+    gateway TEXT NOT NULL,
+    gateway_reference TEXT UNIQUE,
+    client_request_key TEXT NOT NULL UNIQUE,
+    failure_reason TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    processing_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_fiat_deposit_account_id
+    ON fiat_deposit_requests(account_id, id DESC);
+
+CREATE INDEX IF NOT EXISTS idx_fiat_deposit_status
+    ON fiat_deposit_requests(status, updated_at);
+
 CREATE TABLE IF NOT EXISTS ledger_accounts (
     id BIGSERIAL PRIMARY KEY,
     owner_account_id BIGINT REFERENCES accounts(id),

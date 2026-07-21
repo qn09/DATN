@@ -9,6 +9,8 @@ import com.example.exchange.auth.service.AuthService;
 import com.example.exchange.auth.service.JwtService;
 import com.example.exchange.auth.service.LoginRateLimiterService;
 import com.example.exchange.market.controller.MarketController;
+import com.example.exchange.market.service.BinanceDepthStreamService;
+import com.example.exchange.market.service.BinanceMarketDataService;
 import com.example.exchange.market.service.MarketPriceService;
 import io.github.bucket4j.ConsumptionProbe;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,6 +61,12 @@ class SecurityConfigTest {
 
     @MockBean
     private MarketPriceService marketPriceService;
+
+    @MockBean
+    private BinanceMarketDataService binanceMarketDataService;
+
+    @MockBean
+    private BinanceDepthStreamService binanceDepthStreamService;
 
     private final Account account = new Account(1L, "buyer", "hash", Role.USER);
 

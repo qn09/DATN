@@ -339,6 +339,21 @@ th {
   background: rgba(195, 63, 76, 0.12);
 }
 
+.depositStatus {
+  display: inline-flex;
+  min-width: 78px;
+  justify-content: center;
+  border-radius: 4px;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.depositStatus.new { color: #53636c; background: #edf1f3; }
+.depositStatus.processing { color: #8a6700; background: #fff5cf; }
+.depositStatus.success { color: #13795f; background: rgba(19, 121, 95, 0.12); }
+.depositStatus.failed { color: #c33f4c; background: rgba(195, 63, 76, 0.12); }
+
 @media (max-width: 1180px) {
   .adminShell {
     grid-template-columns: 1fr;

@@ -35,4 +35,9 @@ public class AdminController {
     public List<AdminTradeView> trades(@RequestParam(defaultValue = "50") int limit) {
         return queries.trades(limit);
     }
+
+    @GetMapping("/fiat-deposits")
+    public List<AdminFiatDepositView> fiatDeposits(@RequestParam(defaultValue = "50") int limit) {
+        return queries.fiatDeposits(limit);
+    }
 }

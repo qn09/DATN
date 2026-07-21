@@ -1,5 +1,6 @@
 import {
   Activity,
+  ArrowDownToLine,
   BarChart3,
   Database,
   KeyRound,
@@ -131,6 +132,30 @@ export function App() {
                         <td>#{account.id}</td>
                         <td>{account.username}</td>
                         <td><span className={`rolePill ${account.role.toLowerCase()}`}>{account.role}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Panel>
+            </section>
+
+            <section className="grid">
+              <Panel title="Domestic Deposits" icon={<ArrowDownToLine size={18} />}>
+                <table>
+                  <thead>
+                    <tr><th>Reference</th><th>Account</th><th>Amount</th><th>Gateway</th><th>Status</th><th>Created</th></tr>
+                  </thead>
+                  <tbody>
+                    {state.fiatDeposits.length === 0 ? (
+                      <tr><td colSpan="6" className="emptyCell">No fiat deposits</td></tr>
+                    ) : state.fiatDeposits.map((deposit) => (
+                      <tr key={deposit.requestId}>
+                        <td>{deposit.gatewayReference || deposit.requestId.slice(0, 8)}</td>
+                        <td>#{deposit.accountId} {deposit.username}</td>
+                        <td>{formatNumber(deposit.amount)} {deposit.currency}</td>
+                        <td>{deposit.gateway}</td>
+                        <td><span className={`depositStatus ${deposit.status.toLowerCase()}`}>{deposit.status}</span></td>
+                        <td>{formatTime(deposit.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>

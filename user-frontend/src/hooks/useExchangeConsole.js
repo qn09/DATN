@@ -5,77 +5,168 @@ const initialOrder = {
   accountId: '',
   symbol: 'BTC-USDT',
   side: 'BUY',
-  price: '30000',
-  quantity: '1'
+  price: '',
+  quantity: ''
 };
 
-const supportedAssets = ['USDT', 'BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOGE'];
-const marketPriceRefreshMs = 3000;
+const marketRefreshMs = 3000;
+const accountRefreshMs = 5000;
 
-export function useExchangeConsole() {
-  const [auth, setAuth] = React.useState(() => {
+function readStoredAuth() {
+  try {
     const saved = localStorage.getItem('exchange.auth');
     return saved ? JSON.parse(saved) : null;
-  });
+  } catch {
+    localStorage.removeItem('exchange.auth');
+    return null;
+  }
+}
+
+export function useExchangeConsole() {
+  const [auth, setAuth] = React.useState(readStoredAuth);
   const [username, setUsername] = React.useState('api_buyer_01');
   const [password, setPassword] = React.useState('secret123');
   const [selectedAccountId, setSelectedAccountId] = React.useState(() => auth?.account?.id ?? '');
-  const [deposit, setDeposit] = React.useState({ asset: 'USDT', amount: '100000' });
-  const [order, setOrder] = React.useState(initialOrder);
-  const [accounts, setAccounts] = React.useState([]);
+  const [deposit, setDeposit] = React.useState({ currency: 'VND', amount: '1000000', idempotencyKey: '' });
+  const [fiatDeposits, setFiatDeposits] = React.useState([]);
+  const [order, setOrder] = React.useState(() => ({ ...initialOrder, accountId: auth?.account?.id ?? '' }));
   const [balances, setBalances] = React.useState([]);
   const [orders, setOrders] = React.useState([]);
   const [orderBook, setOrderBook] = React.useState(null);
   const [trades, setTrades] = React.useState([]);
   const [marketPrices, setMarketPrices] = React.useState([]);
+  const [klines, setKlines] = React.useState([]);
+  const [chartInterval, setChartInterval] = React.useState('15m');
   const [marketPricesUpdatedAt, setMarketPricesUpdatedAt] = React.useState(null);
   const [marketPricesError, setMarketPricesError] = React.useState('');
-  const [status, setStatus] = React.useState({ type: 'idle', text: 'Ready' });
+  const [marketStreamConnected, setMarketStreamConnected] = React.useState(false);
+  const [status, setStatus] = React.useState({ type: 'idle', text: 'Connected' });
   const [busy, setBusy] = React.useState(false);
-
-  React.useEffect(() => {
-    if (auth?.account?.id) {
-      selectAccount(String(auth.account.id));
-    }
-  }, [auth]);
 
   const request = React.useCallback((path, options = {}) => (
     apiRequest(path, { ...options, token: auth?.token })
   ), [auth?.token]);
 
-  React.useEffect(() => {
-    if (!auth?.token) {
-      return undefined;
-    }
-
-    let cancelled = false;
-    let timerId;
-
-    async function refreshMarketPrices() {
-      try {
-        const data = await request('/market/prices');
-        if (!cancelled) {
-          setMarketPrices(data);
-          setMarketPricesUpdatedAt(new Date().toISOString());
-          setMarketPricesError('');
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setMarketPricesError(error.message);
-        }
-      } finally {
-        if (!cancelled) {
-          timerId = window.setTimeout(refreshMarketPrices, marketPriceRefreshMs);
-        }
+  const syncMarketPrices = React.useCallback(async () => {
+    try {
+      const data = await request('/market/prices');
+      setMarketPrices(data);
+      setMarketPricesUpdatedAt(new Date().toISOString());
+      setMarketPricesError('');
+      const selected = data.find((item) => item.symbol === order.symbol);
+      if (selected) {
+        setOrder((current) => current.price ? current : { ...current, price: String(selected.price) });
       }
+    } catch (error) {
+      setMarketPricesError(error.message);
+    }
+  }, [order.symbol, request]);
+
+  const syncKlines = React.useCallback(async () => {
+    const data = await request(`/market/klines/${order.symbol}?interval=${chartInterval}&limit=300`);
+    setKlines(data);
+  }, [chartInterval, order.symbol, request]);
+
+  const syncOrderBook = React.useCallback(async () => {
+    const data = await request(`/market/depth/${order.symbol}?limit=20`);
+    setOrderBook(data);
+  }, [order.symbol, request]);
+
+  const syncTrades = React.useCallback(async () => {
+    const data = await request(`/trades/${order.symbol}`);
+    setTrades(data);
+  }, [order.symbol, request]);
+
+  const syncAccount = React.useCallback(async () => {
+    if (!selectedAccountId) return;
+    const [balanceResult, orderResult, depositResult] = await Promise.allSettled([
+      request(`/accounts/${selectedAccountId}/balances`),
+      request(`/orders?accountId=${selectedAccountId}`),
+      request(`/fiat-deposits/accounts/${selectedAccountId}?limit=20`)
+    ]);
+    if (balanceResult.status === 'fulfilled') setBalances(balanceResult.value);
+    if (orderResult.status === 'fulfilled') setOrders(orderResult.value);
+    if (depositResult.status === 'fulfilled') setFiatDeposits(depositResult.value);
+  }, [request, selectedAccountId]);
+
+  React.useEffect(() => {
+    if (!auth?.account?.id) return;
+    const accountId = String(auth.account.id);
+    setSelectedAccountId(accountId);
+    setOrder((current) => ({ ...current, accountId }));
+  }, [auth?.account?.id]);
+
+  React.useEffect(() => {
+    if (!auth?.token) return undefined;
+    setMarketStreamConnected(false);
+    let stopped = false;
+    let timer;
+    async function pollMarket() {
+      await Promise.allSettled([syncMarketPrices(), syncKlines(), syncTrades()]);
+      if (!stopped) timer = window.setTimeout(pollMarket, marketRefreshMs);
+    }
+    pollMarket();
+    return () => { stopped = true; window.clearTimeout(timer); };
+  }, [auth?.token, syncKlines, syncMarketPrices, syncTrades]);
+
+  React.useEffect(() => {
+    if (!auth?.token) return undefined;
+    let stopped = false;
+    let socket;
+    let reconnectTimer;
+    let reconnectDelay = 1000;
+
+    async function connect() {
+      await syncOrderBook().catch(() => undefined);
+      if (stopped) return;
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      socket = new WebSocket(`${protocol}//${window.location.host}/ws/market`);
+      socket.onopen = () => {
+        reconnectDelay = 1000;
+        socket.send(JSON.stringify({ type: 'AUTH', token: auth.token }));
+      };
+      socket.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === 'AUTHENTICATED') {
+            socket.send(JSON.stringify({ type: 'SUBSCRIBE', symbol: order.symbol }));
+          } else if (message.type === 'DEPTH' && message.data?.symbol === order.symbol) {
+            setOrderBook(message.data);
+            setMarketStreamConnected(true);
+          }
+        } catch {
+          socket.close();
+        }
+      };
+      socket.onerror = () => socket.close();
+      socket.onclose = () => {
+        setMarketStreamConnected(false);
+        if (!stopped) {
+          reconnectTimer = window.setTimeout(connect, reconnectDelay);
+          reconnectDelay = Math.min(reconnectDelay * 2, 10000);
+        }
+      };
     }
 
-    refreshMarketPrices();
+    connect();
     return () => {
-      cancelled = true;
-      window.clearTimeout(timerId);
+      stopped = true;
+      window.clearTimeout(reconnectTimer);
+      if (socket && socket.readyState < WebSocket.CLOSING) socket.close();
     };
-  }, [auth?.token, request]);
+  }, [auth?.token, order.symbol, syncOrderBook]);
+
+  React.useEffect(() => {
+    if (!auth?.token || !selectedAccountId) return undefined;
+    let stopped = false;
+    let timer;
+    async function pollAccount() {
+      await syncAccount();
+      if (!stopped) timer = window.setTimeout(pollAccount, accountRefreshMs);
+    }
+    pollAccount();
+    return () => { stopped = true; window.clearTimeout(timer); };
+  }, [auth?.token, selectedAccountId, syncAccount]);
 
   async function run(label, action) {
     setBusy(true);
@@ -94,14 +185,10 @@ export function useExchangeConsole() {
 
   async function submitAuth(event) {
     event.preventDefault();
-    const payload = { username, password };
-    const result = await run('Login', () =>
-      apiRequest('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-        headers: {}
-      })
-    );
+    const result = await run('Sign in', () => apiRequest('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password })
+    }));
     if (result) {
       setAuth(result);
       localStorage.setItem('exchange.auth', JSON.stringify(result));
@@ -110,122 +197,84 @@ export function useExchangeConsole() {
 
   function logout() {
     setAuth(null);
-    setAccounts([]);
     setBalances([]);
+    setFiatDeposits([]);
     setOrders([]);
     setOrderBook(null);
     setTrades([]);
     setMarketPrices([]);
-    setMarketPricesUpdatedAt(null);
-    setMarketPricesError('');
+    setKlines([]);
+    setMarketStreamConnected(false);
     localStorage.removeItem('exchange.auth');
-    setStatus({ type: 'idle', text: 'Signed out' });
+    setStatus({ type: 'idle', text: 'Connected' });
   }
 
-  function selectAccount(accountId) {
-    setSelectedAccountId(accountId);
-    setOrder((current) => ({ ...current, accountId }));
-  }
-
-  async function loadAccounts() {
-    const data = await run('Load accounts', () => request('/accounts'));
-    if (data) setAccounts(data);
-  }
-
-  async function loadBalances() {
-    if (!selectedAccountId) return setStatus({ type: 'error', text: 'Select an account first' });
-    const data = await run('Load balances', () => request(`/accounts/${selectedAccountId}/balances`));
-    if (data) setBalances(data);
+  function selectSymbol(symbol) {
+    const price = marketPrices.find((item) => item.symbol === symbol)?.price;
+    setKlines([]);
+    setOrder((current) => ({ ...current, symbol, price: price ? String(price) : '' }));
   }
 
   async function submitDeposit(event) {
     event.preventDefault();
-    if (!selectedAccountId) return setStatus({ type: 'error', text: 'Select an account first' });
-    const data = await run('Deposit', () =>
-      request(`/accounts/${selectedAccountId}/deposit`, {
+    const idempotencyKey = deposit.idempotencyKey || crypto.randomUUID();
+    const data = await run('Create deposit', async () => {
+      const created = await request('/fiat-deposits', {
         method: 'POST',
-        body: JSON.stringify({ asset: deposit.asset, amount: Number(deposit.amount) })
-      })
-    );
-    if (data) setBalances(data);
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify({
+          accountId: Number(selectedAccountId),
+          currency: deposit.currency,
+          amount: Number(deposit.amount)
+        })
+      });
+      return request(`/fiat-deposits/${created.requestId}/submit`, { method: 'POST' });
+    });
+    if (data) {
+      setDeposit((current) => ({ ...current, idempotencyKey: '' }));
+      setFiatDeposits((current) => [data, ...current.filter((item) => item.requestId !== data.requestId)]);
+      await syncAccount();
+    }
   }
 
   async function submitOrder(event) {
     event.preventDefault();
-    const payload = {
-      ...order,
-      accountId: Number(order.accountId),
-      price: Number(order.price),
-      quantity: Number(order.quantity)
-    };
-    const data = await run('Place order', () =>
-      request('/orders', {
-        method: 'POST',
-        body: JSON.stringify(payload)
+    const data = await run('Place order', () => request('/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...order,
+        accountId: Number(order.accountId),
+        price: Number(order.price),
+        quantity: Number(order.quantity)
       })
-    );
+    }));
     if (data) {
-      await Promise.all([loadOrders(), loadOrderBook(), loadTrades(), loadBalances()]);
+      setOrder((current) => ({ ...current, quantity: '' }));
+      await Promise.allSettled([syncTrades(), syncAccount()]);
     }
-  }
-
-  async function loadOrders() {
-    const query = selectedAccountId ? `?accountId=${selectedAccountId}` : '';
-    const data = await run('Load orders', () => request(`/orders${query}`));
-    if (data) setOrders(data);
-  }
-
-  async function loadOrderBook() {
-    const symbol = order.symbol || 'BTC-USDT';
-    const data = await run('Load order book', () => request(`/orderbook/${symbol}`));
-    if (data) setOrderBook(data);
-  }
-
-  async function loadTrades() {
-    const symbol = order.symbol || 'BTC-USDT';
-    const data = await run('Load trades', () => request(`/trades/${symbol}`));
-    if (data) setTrades(data);
-  }
-
-  async function loadMarketPrices() {
-    try {
-      const data = await request('/market/prices');
-      setMarketPrices(data);
-      setMarketPricesUpdatedAt(new Date().toISOString());
-      setMarketPricesError('');
-    } catch (error) {
-      setMarketPricesError(error.message);
-    }
-  }
-
-  function refreshAll() {
-    return Promise.all([loadAccounts(), loadBalances(), loadOrders(), loadOrderBook(), loadTrades(), loadMarketPrices()]);
   }
 
   return {
-    accounts,
     auth,
     balances,
     busy,
     deposit,
-    loadAccounts,
-    loadBalances,
-    loadOrderBook,
-    loadOrders,
-    loadTrades,
-    loadMarketPrices,
+    fiatDeposits,
+    chartInterval,
+    klines,
     logout,
     marketPrices,
     marketPricesError,
     marketPricesUpdatedAt,
+    marketStreamConnected,
     order,
     orderBook,
     orders,
     password,
-    refreshAll,
     selectedAccountId,
-    selectAccount,
+    selectSymbol,
     setDeposit,
+    setChartInterval,
     setOrder,
     setPassword,
     setUsername,
@@ -233,7 +282,6 @@ export function useExchangeConsole() {
     submitAuth,
     submitDeposit,
     submitOrder,
-    supportedAssets,
     trades,
     username
   };

@@ -1,8 +1,11 @@
 package com.example.exchange.ledger.service;
 
+import com.example.exchange.common.AssetCatalog;
 import com.example.exchange.ledger.entity.EntryDirection;
 import com.example.exchange.ledger.entity.LedgerAccountType;
 import com.example.exchange.ledger.entity.LedgerPosting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -14,6 +17,8 @@ import java.util.List;
 
 @Component
 public class LedgerOpeningBalanceInitializer implements ApplicationRunner {
+    private static final Logger log = LoggerFactory.getLogger(LedgerOpeningBalanceInitializer.class);
+
     private final JdbcTemplate jdbc;
     private final LedgerService ledger;
 
@@ -24,7 +29,17 @@ public class LedgerOpeningBalanceInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        findBalancesWithoutLedger().forEach(this::recordOpeningBalance);
+        findBalancesWithoutLedger().forEach(balance -> {
+            if (!AssetCatalog.SUPPORTED_ASSETS.contains(balance.asset())) {
+                log.warn(
+                        "Skipping opening ledger balance for account {} with unsupported asset {}",
+                        balance.accountId(),
+                        balance.asset()
+                );
+                return;
+            }
+            recordOpeningBalance(balance);
+        });
     }
 
     private List<OpeningBalance> findBalancesWithoutLedger() {
