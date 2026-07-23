@@ -354,6 +354,49 @@ th {
 .depositStatus.success { color: #13795f; background: rgba(19, 121, 95, 0.12); }
 .depositStatus.failed { color: #c33f4c; background: rgba(195, 63, 76, 0.12); }
 
+.depositDecision {
+  display: grid;
+  grid-template-columns: 32px minmax(110px, 1fr) 32px;
+  align-items: center;
+  gap: 6px;
+  min-width: 210px;
+}
+
+.depositDecision input {
+  min-height: 32px;
+  padding: 5px 8px;
+}
+
+.decisionButton {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid;
+  border-radius: 6px;
+  padding: 0;
+  background: #ffffff;
+}
+
+.decisionButton.approve {
+  color: #13795f;
+  border-color: rgba(19, 121, 95, 0.38);
+}
+
+.decisionButton.reject {
+  color: #c33f4c;
+  border-color: rgba(195, 63, 76, 0.38);
+}
+
+.decisionResult {
+  display: block;
+  max-width: 240px;
+  overflow: hidden;
+  color: #718087;
+  font-size: 12px;
+  text-overflow: ellipsis;
+}
+
 @media (max-width: 1180px) {
   .adminShell {
     grid-template-columns: 1fr;

@@ -17,6 +17,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.Clock;
+import java.time.ZoneOffset;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,10 +32,14 @@ class FiatDepositServiceTest {
     private GatewayCallbackSignature signatures;
     private WalletService wallets;
     private LedgerService ledger;
+    private Instant callbackTime;
 
     @BeforeEach
     void setUp() {
-        signatures = new GatewayCallbackSignature(SECRET);
+        callbackTime = Instant.parse("2026-07-23T07:00:00Z");
+        signatures = new GatewayCallbackSignature(
+                SECRET, 300, Clock.fixed(callbackTime, ZoneOffset.UTC)
+        );
         ledger = new LedgerService(new InMemoryLedgerRepository());
         wallets = new WalletService(new InMemoryWalletRepository(), ledger);
         DomesticTransferGateway gateway = new DomesticTransferGateway() {
@@ -111,6 +119,7 @@ class FiatDepositServiceTest {
     void failedCallbackIsTerminalAndDoesNotCreditWallet() {
         FiatDepositRequest processing = deposits.submit(create("request-1", "1000000").requestId());
         GatewayDepositCallbackRequest callback = new GatewayDepositCallbackRequest(
+                UUID.randomUUID().toString(), callbackTime,
                 processing.requestId(), processing.gatewayReference(), "FAILED",
                 processing.currency(), processing.amount(), "bank rejected transfer"
         );
@@ -122,6 +131,37 @@ class FiatDepositServiceTest {
         assertThat(wallets.balances(1L)).isEmpty();
     }
 
+    @Test
+    void staleCallbackIsRejectedBeforeWalletCredit() {
+        FiatDepositRequest processing = deposits.submit(create("request-1", "1000000").requestId());
+        GatewayDepositCallbackRequest callback = new GatewayDepositCallbackRequest(
+                UUID.randomUUID().toString(), callbackTime.minusSeconds(301),
+                processing.requestId(), processing.gatewayReference(), "SUCCESS",
+                processing.currency(), processing.amount(), null
+        );
+
+        assertThatThrownBy(() -> deposits.processCallback(callback, signatures.sign(callback)))
+                .hasMessage("gateway callback timestamp is outside the allowed window");
+        assertThat(wallets.balances(1L)).isEmpty();
+    }
+
+    @Test
+    void callbackEventIdCannotBeReusedWithDifferentPayload() {
+        FiatDepositRequest processing = deposits.submit(create("request-1", "1000000").requestId());
+        GatewayDepositCallbackRequest success = successCallback(processing, "1000000");
+        deposits.processCallback(success, signatures.sign(success));
+        GatewayDepositCallbackRequest conflicting = new GatewayDepositCallbackRequest(
+                success.eventId(), callbackTime,
+                processing.requestId(), processing.gatewayReference(), "FAILED",
+                processing.currency(), processing.amount(), "conflicting callback"
+        );
+
+        assertThatThrownBy(() -> deposits.processCallback(conflicting, signatures.sign(conflicting)))
+                .hasMessage("gateway callback event id was reused with different data");
+        assertThat(wallets.balances(1L).get(0).available()).isEqualByComparingTo("1000000");
+        assertThat(ledger.history(1L, 50)).hasSize(1);
+    }
+
     private FiatDepositRequest create(String key, String amount) {
         return deposits.create(
                 new CreateFiatDepositRequest(1L, "VND", new BigDecimal(amount)),
@@ -131,6 +171,7 @@ class FiatDepositServiceTest {
 
     private GatewayDepositCallbackRequest successCallback(FiatDepositRequest request, String amount) {
         return new GatewayDepositCallbackRequest(
+                UUID.randomUUID().toString(), callbackTime,
                 request.requestId(), request.gatewayReference(), "SUCCESS",
                 request.currency(), new BigDecimal(amount), null
         );

@@ -4,6 +4,7 @@ import com.example.exchange.common.AssetCatalog;
 import com.example.exchange.deposit.dto.CreateFiatDepositRequest;
 import com.example.exchange.deposit.dto.GatewayDepositCallbackRequest;
 import com.example.exchange.deposit.entity.FiatDepositRequest;
+import com.example.exchange.deposit.entity.FiatDepositCallbackEvent;
 import com.example.exchange.deposit.entity.FiatDepositStatus;
 import com.example.exchange.deposit.gateway.DomesticTransferGateway;
 import com.example.exchange.deposit.gateway.GatewaySubmission;
@@ -92,10 +93,21 @@ public class FiatDepositService {
     ) {
         signatures.requireValid(signature, callback);
         FiatDepositRequest request = requireForUpdate(callback.requestId());
+        String eventId = callback.eventId().trim();
+        String normalizedSignature = signature.trim().toLowerCase(Locale.ROOT);
+        FiatDepositCallbackEvent existingEvent = deposits.findCallbackEvent(eventId).orElse(null);
+        if (existingEvent != null) {
+            if (!existingEvent.requestId().equals(request.requestId())
+                    || !existingEvent.signature().equals(normalizedSignature)) {
+                throw new IllegalArgumentException("gateway callback event id was reused with different data");
+            }
+            return request;
+        }
         validateCallback(request, callback);
 
         FiatDepositStatus callbackStatus = callbackStatus(callback.status());
         if (request.status() == callbackStatus && request.status().isTerminal()) {
+            deposits.recordCallbackEvent(eventId, request.requestId(), normalizedSignature);
             return request;
         }
         if (request.status() != FiatDepositStatus.PROCESSING) {
@@ -106,9 +118,15 @@ public class FiatDepositService {
             wallets.creditFiatDeposit(
                     request.accountId(), request.currency(), request.amount(), request.requestId()
             );
-            return deposits.markSuccess(request.requestId());
+            FiatDepositRequest completed = deposits.markSuccess(request.requestId());
+            deposits.recordCallbackEvent(eventId, request.requestId(), normalizedSignature);
+            return completed;
         }
-        return deposits.markFailed(request.requestId(), failureReason(callback.failureReason()));
+        FiatDepositRequest completed = deposits.markFailed(
+                request.requestId(), failureReason(callback.failureReason())
+        );
+        deposits.recordCallbackEvent(eventId, request.requestId(), normalizedSignature);
+        return completed;
     }
 
     public FiatDepositRequest require(String requestId) {

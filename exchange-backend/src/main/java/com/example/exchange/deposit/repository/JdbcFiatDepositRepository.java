@@ -1,6 +1,7 @@
 package com.example.exchange.deposit.repository;
 
 import com.example.exchange.deposit.entity.FiatDepositRequest;
+import com.example.exchange.deposit.entity.FiatDepositCallbackEvent;
 import com.example.exchange.deposit.entity.FiatDepositStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -80,6 +81,45 @@ public class JdbcFiatDepositRepository implements FiatDepositRepository {
                 accountId,
                 limit
         );
+    }
+
+    @Override
+    public Optional<FiatDepositCallbackEvent> findCallbackEvent(String eventId) {
+        return jdbc.query(
+                """
+                        SELECT event_id, request_id, signature, processed_at
+                        FROM fiat_deposit_callback_events
+                        WHERE event_id = ?
+                        """,
+                (rs, rowNum) -> new FiatDepositCallbackEvent(
+                        rs.getString("event_id"),
+                        rs.getString("request_id"),
+                        rs.getString("signature"),
+                        rs.getTimestamp("processed_at").toInstant()
+                ),
+                eventId
+        ).stream().findFirst();
+    }
+
+    @Override
+    public void recordCallbackEvent(String eventId, String requestId, String signature) {
+        int inserted = jdbc.update(
+                """
+                        INSERT INTO fiat_deposit_callback_events (event_id, request_id, signature)
+                        VALUES (?, ?, ?)
+                        ON CONFLICT (event_id) DO NOTHING
+                        """,
+                eventId,
+                requestId,
+                signature
+        );
+        if (inserted == 0) {
+            FiatDepositCallbackEvent existing = findCallbackEvent(eventId)
+                    .orElseThrow(() -> new IllegalStateException("gateway callback event was not persisted"));
+            if (!existing.requestId().equals(requestId) || !existing.signature().equals(signature)) {
+                throw new IllegalArgumentException("gateway callback event id was reused with different data");
+            }
+        }
     }
 
     @Override

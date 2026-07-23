@@ -1,6 +1,7 @@
 package com.example.exchange.deposit.repository;
 
 import com.example.exchange.deposit.entity.FiatDepositRequest;
+import com.example.exchange.deposit.entity.FiatDepositCallbackEvent;
 import com.example.exchange.deposit.entity.FiatDepositStatus;
 
 import java.math.BigDecimal;
@@ -16,6 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class InMemoryFiatDepositRepository implements FiatDepositRepository {
     private final AtomicLong ids = new AtomicLong();
     private final Map<String, FiatDepositRequest> requests = new LinkedHashMap<>();
+    private final Map<String, FiatDepositCallbackEvent> callbackEvents = new LinkedHashMap<>();
 
     @Override
     public synchronized FiatDepositRequest create(
@@ -60,6 +62,25 @@ public class InMemoryFiatDepositRepository implements FiatDepositRepository {
                 .sorted(Comparator.comparingLong(FiatDepositRequest::id).reversed())
                 .limit(limit)
                 .toList();
+    }
+
+    @Override
+    public synchronized Optional<FiatDepositCallbackEvent> findCallbackEvent(String eventId) {
+        return Optional.ofNullable(callbackEvents.get(eventId));
+    }
+
+    @Override
+    public synchronized void recordCallbackEvent(String eventId, String requestId, String signature) {
+        FiatDepositCallbackEvent existing = callbackEvents.get(eventId);
+        if (existing != null) {
+            if (!existing.requestId().equals(requestId) || !existing.signature().equals(signature)) {
+                throw new IllegalArgumentException("gateway callback event id was reused with different data");
+            }
+            return;
+        }
+        callbackEvents.put(eventId, new FiatDepositCallbackEvent(
+                eventId, requestId, signature, Instant.now()
+        ));
     }
 
     @Override

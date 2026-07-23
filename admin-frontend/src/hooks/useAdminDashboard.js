@@ -13,6 +13,7 @@ export function useAdminDashboard() {
   const [orders, setOrders] = React.useState([]);
   const [trades, setTrades] = React.useState([]);
   const [fiatDeposits, setFiatDeposits] = React.useState([]);
+  const [depositFailureReasons, setDepositFailureReasons] = React.useState({});
   const [prices, setPrices] = React.useState([]);
   const [status, setStatus] = React.useState({ type: 'idle', text: 'Ready' });
   const [busy, setBusy] = React.useState(false);
@@ -60,6 +61,7 @@ export function useAdminDashboard() {
     setOrders([]);
     setTrades([]);
     setFiatDeposits([]);
+    setDepositFailureReasons({});
     setPrices([]);
     localStorage.removeItem('exchange.admin.auth');
     setStatus({ type: 'idle', text: 'Signed out' });
@@ -86,6 +88,30 @@ export function useAdminDashboard() {
     setPrices(data[5]);
   }
 
+  function setDepositFailureReason(requestId, value) {
+    setDepositFailureReasons((current) => ({ ...current, [requestId]: value }));
+  }
+
+  async function decideDeposit(requestId, decision) {
+    const failureReason = depositFailureReasons[requestId] || '';
+    const result = await run(`${decision === 'SUCCESS' ? 'Approve' : 'Reject'} deposit`, () =>
+      request(`/admin/fiat-deposits/${requestId}/decision`, {
+        method: 'POST',
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        body: JSON.stringify({ status: decision, failureReason })
+      })
+    );
+    if (!result) return;
+    setFiatDeposits((current) => current.map(
+      (deposit) => deposit.requestId === requestId ? result : deposit
+    ));
+    setDepositFailureReasons((current) => {
+      const next = { ...current };
+      delete next[requestId];
+      return next;
+    });
+  }
+
   React.useEffect(() => {
     refreshDashboard();
   }, [auth]);
@@ -94,6 +120,8 @@ export function useAdminDashboard() {
     accounts,
     auth,
     busy,
+    decideDeposit,
+    depositFailureReasons,
     fiatDeposits,
     login,
     logout,
@@ -101,6 +129,7 @@ export function useAdminDashboard() {
     password,
     prices,
     refreshDashboard,
+    setDepositFailureReason,
     setPassword,
     setUsername,
     status,

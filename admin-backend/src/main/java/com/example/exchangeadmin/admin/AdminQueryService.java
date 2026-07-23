@@ -87,29 +87,58 @@ public class AdminQueryService {
                         SELECT deposit.request_id, deposit.account_id, account.username,
                                deposit.currency, deposit.amount, deposit.status, deposit.gateway,
                                deposit.gateway_reference, deposit.failure_reason,
-                               deposit.created_at, deposit.completed_at
+                               deposit.created_at, deposit.processing_at, deposit.completed_at
                         FROM fiat_deposit_requests deposit
                         JOIN accounts account ON account.id = deposit.account_id
                         ORDER BY deposit.id DESC
                         LIMIT ?
                         """,
-                (rs, rowNum) -> new AdminFiatDepositView(
-                        rs.getString("request_id"),
-                        rs.getLong("account_id"),
-                        rs.getString("username"),
-                        rs.getString("currency"),
-                        normalize(rs.getBigDecimal("amount")),
-                        rs.getString("status"),
-                        rs.getString("gateway"),
-                        rs.getString("gateway_reference"),
-                        rs.getString("failure_reason"),
-                        rs.getTimestamp("created_at").toInstant(),
-                        rs.getTimestamp("completed_at") == null
-                                ? null
-                                : rs.getTimestamp("completed_at").toInstant()
-                ),
+                this::mapFiatDeposit,
                 safeLimit
         );
+    }
+
+    public AdminFiatDepositView requireFiatDeposit(String requestId) {
+        if (requestId == null || requestId.isBlank()) {
+            throw new IllegalArgumentException("requestId is required");
+        }
+        return jdbc.query(
+                """
+                        SELECT deposit.request_id, deposit.account_id, account.username,
+                               deposit.currency, deposit.amount, deposit.status, deposit.gateway,
+                               deposit.gateway_reference, deposit.failure_reason,
+                               deposit.created_at, deposit.processing_at, deposit.completed_at
+                        FROM fiat_deposit_requests deposit
+                        JOIN accounts account ON account.id = deposit.account_id
+                        WHERE deposit.request_id = ?
+                        """,
+                this::mapFiatDeposit,
+                requestId.trim()
+        ).stream().findFirst().orElseThrow(
+                () -> new IllegalArgumentException("fiat deposit not found: " + requestId)
+        );
+    }
+
+    private AdminFiatDepositView mapFiatDeposit(java.sql.ResultSet rs, int rowNum)
+            throws java.sql.SQLException {
+        return new AdminFiatDepositView(
+                rs.getString("request_id"),
+                rs.getLong("account_id"),
+                rs.getString("username"),
+                rs.getString("currency"),
+                normalize(rs.getBigDecimal("amount")),
+                rs.getString("status"),
+                rs.getString("gateway"),
+                rs.getString("gateway_reference"),
+                rs.getString("failure_reason"),
+                rs.getTimestamp("created_at").toInstant(),
+                instant(rs.getTimestamp("processing_at")),
+                instant(rs.getTimestamp("completed_at"))
+        );
+    }
+
+    private static java.time.Instant instant(java.sql.Timestamp timestamp) {
+        return timestamp == null ? null : timestamp.toInstant();
     }
 
     private long count(String sql) {

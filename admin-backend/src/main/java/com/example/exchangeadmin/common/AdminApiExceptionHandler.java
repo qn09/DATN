@@ -1,5 +1,6 @@
 package com.example.exchangeadmin.common;
 
+import com.example.exchangeadmin.admin.AdminDepositGatewayException;
 import com.example.exchangeadmin.market.AdminMarketDataUnavailableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,11 @@ public class AdminApiExceptionHandler {
 
     @ExceptionHandler(AdminMarketDataUnavailableException.class)
     ResponseEntity<Map<String, String>> marketUnavailable(AdminMarketDataUnavailableException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", exception.getMessage()));
+    }
+
+    @ExceptionHandler(AdminDepositGatewayException.class)
+    ResponseEntity<Map<String, String>> depositGatewayUnavailable(AdminDepositGatewayException exception) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", exception.getMessage()));
     }
 }

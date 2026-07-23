@@ -14,6 +14,7 @@ public record AdminFiatDepositView(
         String gatewayReference,
         String failureReason,
         Instant createdAt,
+        Instant processingAt,
         Instant completedAt
 ) {
 }

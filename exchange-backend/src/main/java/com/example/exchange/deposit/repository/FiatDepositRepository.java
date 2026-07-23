@@ -1,6 +1,7 @@
 package com.example.exchange.deposit.repository;
 
 import com.example.exchange.deposit.entity.FiatDepositRequest;
+import com.example.exchange.deposit.entity.FiatDepositCallbackEvent;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -23,6 +24,10 @@ public interface FiatDepositRepository {
     Optional<FiatDepositRequest> findByClientRequestKey(String clientRequestKey);
 
     List<FiatDepositRequest> findByAccountId(long accountId, int limit);
+
+    Optional<FiatDepositCallbackEvent> findCallbackEvent(String eventId);
+
+    void recordCallbackEvent(String eventId, String requestId, String signature);
 
     FiatDepositRequest markProcessing(String requestId, String gatewayReference);
 

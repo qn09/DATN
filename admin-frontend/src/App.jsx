@@ -2,6 +2,7 @@ import {
   Activity,
   ArrowDownToLine,
   BarChart3,
+  Check,
   Database,
   KeyRound,
   ListOrdered,
@@ -10,7 +11,8 @@ import {
   ShieldCheck,
   TrendingUp,
   Users,
-  Wallet
+  Wallet,
+  X
 } from 'lucide-react';
 import { MetricCard } from './components/MetricCard.jsx';
 import { Panel } from './components/Panel.jsx';
@@ -143,19 +145,51 @@ export function App() {
               <Panel title="Domestic Deposits" icon={<ArrowDownToLine size={18} />}>
                 <table>
                   <thead>
-                    <tr><th>Reference</th><th>Account</th><th>Amount</th><th>Gateway</th><th>Status</th><th>Created</th></tr>
+                    <tr><th>Reference</th><th>Account</th><th>Amount</th><th>Gateway</th><th>Status</th><th>Created</th><th>Decision</th></tr>
                   </thead>
                   <tbody>
                     {state.fiatDeposits.length === 0 ? (
-                      <tr><td colSpan="6" className="emptyCell">No fiat deposits</td></tr>
+                      <tr><td colSpan="7" className="emptyCell">No fiat deposits</td></tr>
                     ) : state.fiatDeposits.map((deposit) => (
                       <tr key={deposit.requestId}>
-                        <td>{deposit.gatewayReference || deposit.requestId.slice(0, 8)}</td>
+                        <td title={deposit.gatewayReference || deposit.requestId}>
+                          {(deposit.gatewayReference || deposit.requestId).slice(0, 18)}
+                        </td>
                         <td>#{deposit.accountId} {deposit.username}</td>
                         <td>{formatNumber(deposit.amount)} {deposit.currency}</td>
                         <td>{deposit.gateway}</td>
                         <td><span className={`depositStatus ${deposit.status.toLowerCase()}`}>{deposit.status}</span></td>
                         <td>{formatTime(deposit.createdAt)}</td>
+                        <td>
+                          {deposit.status === 'PROCESSING' ? (
+                            <div className="depositDecision">
+                              <button
+                                className="decisionButton approve"
+                                title="Approve deposit"
+                                disabled={state.busy}
+                                onClick={() => state.decideDeposit(deposit.requestId, 'SUCCESS')}
+                              >
+                                <Check size={15} />
+                              </button>
+                              <input
+                                aria-label={`Rejection reason for ${deposit.requestId}`}
+                                placeholder="Rejection reason"
+                                value={state.depositFailureReasons[deposit.requestId] || ''}
+                                onChange={(event) => state.setDepositFailureReason(deposit.requestId, event.target.value)}
+                              />
+                              <button
+                                className="decisionButton reject"
+                                title="Reject deposit"
+                                disabled={state.busy || !(state.depositFailureReasons[deposit.requestId] || '').trim()}
+                                onClick={() => state.decideDeposit(deposit.requestId, 'FAILED')}
+                              >
+                                <X size={15} />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="decisionResult">{deposit.failureReason || 'Completed'}</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

@@ -41,6 +41,16 @@ CREATE INDEX IF NOT EXISTS idx_fiat_deposit_account_id
 CREATE INDEX IF NOT EXISTS idx_fiat_deposit_status
     ON fiat_deposit_requests(status, updated_at);
 
+CREATE TABLE IF NOT EXISTS fiat_deposit_callback_events (
+    event_id TEXT PRIMARY KEY,
+    request_id TEXT NOT NULL REFERENCES fiat_deposit_requests(request_id),
+    signature TEXT NOT NULL,
+    processed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_fiat_deposit_callback_request
+    ON fiat_deposit_callback_events(request_id, processed_at DESC);
+
 CREATE TABLE IF NOT EXISTS ledger_accounts (
     id BIGSERIAL PRIMARY KEY,
     owner_account_id BIGINT REFERENCES accounts(id),

@@ -1,9 +1,9 @@
-package com.example.exchange.deposit.dto;
+package com.example.exchangeadmin.admin;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 
-public record GatewayDepositCallbackRequest(
+public record ExchangeFiatDepositCallback(
         String eventId,
         Instant occurredAt,
         String requestId,

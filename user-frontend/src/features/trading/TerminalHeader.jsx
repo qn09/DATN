@@ -1,4 +1,4 @@
-import { BarChart3, Bell, LogOut, Search, Wallet } from 'lucide-react';
+import { BarChart3, Bell, Cloud, LogOut, Search, Wallet } from 'lucide-react';
 
 export function TerminalHeader({ account, marketPrices, selectedSymbol, status, onLogout, onSelectSymbol }) {
   return (
@@ -20,7 +20,9 @@ export function TerminalHeader({ account, marketPrices, selectedSymbol, status, 
         </select>
       </label>
       <div className="terminalActions">
-        <span className={`syncState ${status.type}`} title={status.text}><i /> {status.text}</span>
+        <span className={`syncState ${status.type}`} title={status.text} aria-label={status.text}>
+          <Cloud size={16} />
+        </span>
         <button className="iconControl" title="Notifications" aria-label="Notifications"><Bell size={17} /></button>
         <span className="accountName"><Wallet size={15} /> {account.username}</span>
         <button className="iconControl" onClick={onLogout} title="Sign out" aria-label="Sign out"><LogOut size={17} /></button>
